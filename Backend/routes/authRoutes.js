@@ -9,7 +9,7 @@ router.post('/register', register);
 router.post('/login', login);
 
 
-router.get('/profile', auth, (req, res) => {
+router.get('/me', auth, (req, res) => {
   res.json({ msg: 'Protected route accessed', userId: req.userId });
 });
 
