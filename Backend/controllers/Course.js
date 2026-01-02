@@ -8,7 +8,7 @@ const createCourse = async(req , res)=>{
             return res.status(400).json({msg : "Prompt is required"});
         }   
         const newCourse = new Course({
-            usreId : req.userId,
+            userId : req.userId,
             prompt,
             title,
             language
@@ -21,8 +21,8 @@ const createCourse = async(req , res)=>{
 }
 const getCourses = async(req , res)=>{
     try{
-        const courses = await Course.find({usreId : req.userId});
-        res.status(200).json({courses});
+        const courses = await Course.find({userId : req.userId});
+        res.status(200).json(courses);
     }catch(err){
         res.status(500).json({msg : "Server Error"});
     }

@@ -1,0 +1,89 @@
+{
+  "name": "Analyze Prompt Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-prompt",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "message": "You are an AI that extracts structured data from course requests. Analyze the prompt and return ONLY valid JSON with these exact fields:\n- subject (the main topic)\n- level (Beginner, Intermediate, or Advanced)\n- language (the teaching language)\n- style (teaching approach)\n\nReturn ONLY the JSON object, no other text."
+            },
+            {
+              "role": "user",
+              "message": "={{ $json.prompt }}"
+            }
+          ]
+        }
+      },
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5000/api/course/={{ $json.courseId }}/analysis",
+        "method": "POST",
+        "body": {
+          "bodyValues": [
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "level",
+              "value": "={{ $json.level }}"
+            },
+            {
+              "name": "language",
+              "value": "={{ $json.language }}"
+            },
+            {
+              "name": "style",
+              "value": "={{ $json.style }}"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

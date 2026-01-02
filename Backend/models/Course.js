@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const courseSchema =  new mongoose.Schema(
     {
-        usreId:{
+        userId:{
             type:mongoose.Schema.Types.ObjectId,
             ref:"User",
             required:true,
@@ -21,11 +21,17 @@ const courseSchema =  new mongoose.Schema(
             enum:["processing","Completed"],
             default:"processing"
         },
-        module:[],
+        analysis: {
+            subject: String,
+            level: String,
+            language: String,
+            style: String
+        },
+        modules:[],
         videos:[]
     },
     {
-        tiomestamps:true
+        timestamps:true
     }
 )
 

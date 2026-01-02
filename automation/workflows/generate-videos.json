@@ -1,0 +1,90 @@
+{
+  "name": "Generate Videos Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-videos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "tts-1",
+        "input": "={{ $json.lessonContent }}",
+        "voice": "alloy"
+      },
+      "name": "Text-to-Speech",
+      "type": "n8n-nodes-base.openAi",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "command": "ffmpeg -loop 1 -i {{ $json.slidePath }} -i {{ $json.audioPath }} -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest {{ $json.outputPath }}"
+      },
+      "name": "Generate Video (FFmpeg)",
+      "type": "n8n-nodes-base.executeCommand",
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5000/api/course/={{ $json.courseId }}/videos",
+        "method": "POST",
+        "body": {
+          "bodyValues": [
+            {
+              "name": "lessonId",
+              "value": "={{ $json.lessonId }}"
+            },
+            {
+              "name": "videoUrl",
+              "value": "={{ $json.videoUrl }}"
+            }
+          ]
+        }
+      },
+      "name": "Save Video URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Text-to-Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text-to-Speech": {
+      "main": [
+        [
+          {
+            "node": "Generate Video (FFmpeg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video (FFmpeg)": {
+      "main": [
+        [
+          {
+            "node": "Save Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

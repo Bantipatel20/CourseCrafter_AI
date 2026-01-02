@@ -1,0 +1,85 @@
+{
+  "name": "Generate Lessons Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-lessons",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "message": "You are an expert course content creator. Generate detailed lesson content with:\n- Clear explanations\n- Real-world examples\n- Practical demonstrations\n- Key takeaways\n\nUse simple, clear language suitable for the specified level."
+            },
+            {
+              "role": "user",
+              "message": "Generate content for this lesson:\n\nModule: {{ $json.moduleTitle }}\nLesson: {{ $json.lessonTitle }}\nSubject: {{ $json.subject }}\nLevel: {{ $json.level }}\nLanguage: {{ $json.language }}"
+            }
+          ]
+        }
+      },
+      "name": "OpenAI Content Generation",
+      "type": "n8n-nodes-base.openAi",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5000/api/course/={{ $json.courseId }}/lessons",
+        "method": "POST",
+        "body": {
+          "bodyValues": [
+            {
+              "name": "moduleId",
+              "value": "={{ $json.moduleId }}"
+            },
+            {
+              "name": "lessonId",
+              "value": "={{ $json.lessonId }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $json.content }}"
+            }
+          ]
+        }
+      },
+      "name": "Save Lesson",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Content Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Content Generation": {
+      "main": [
+        [
+          {
+            "node": "Save Lesson",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

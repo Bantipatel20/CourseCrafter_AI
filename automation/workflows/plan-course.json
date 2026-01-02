@@ -1,0 +1,81 @@
+{
+  "name": "Plan Course Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "plan-course",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "message": "You are an AI course planner.\n\nUsing the given data, generate a structured course plan.\nReturn ONLY JSON.\n\nJSON format:\n{\n  \"title\": \"\",\n  \"modules\": [\n    {\n      \"title\": \"\",\n      \"lessons\": []\n    }\n  ]\n}\n\nRules:\n- Beginner level → simple structure\n- Use 3–5 modules\n- Each module 3–5 lessons"
+            },
+            {
+              "role": "user",
+              "message": "Subject: {{ $json.analysis.subject }}\nLevel: {{ $json.analysis.level }}\nLanguage: {{ $json.analysis.language }}\nStyle: {{ $json.analysis.style }}"
+            }
+          ]
+        }
+      },
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5000/api/course/={{ $json.courseId }}/plan",
+        "method": "POST",
+        "body": {
+          "bodyValues": [
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "modules",
+              "value": "={{ JSON.stringify($json.modules) }}"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
