@@ -105,10 +105,50 @@ const updateCoursePlan = async(req , res)=>{
             return res.status(404).json({msg : "Course not found"});
         }
         
-        res.status(200).json({msg : "Course plan saved successfully", course});
+        // 🔥 Trigger Module 5 (Lesson Content Generation)
+        try {
+            const n8nLessonUrl = process.env.N8N_LESSON_WEBHOOK_URL || 'http://localhost:5678/webhook/generate-lessons';
+            await axios.post(n8nLessonUrl, {
+                courseId: course._id.toString(),
+                courseTitle: course.title,
+                modules: course.modules
+            });
+        } catch (webhookErr) {
+            console.error('Failed to trigger lesson generation webhook:', webhookErr.message);
+        }
+        
+        res.status(200).json({msg : "Course plan saved successfully, lesson generation started", course});
     }catch(err){
         res.status(500).json({msg : "Server Error"});
     }
 }
 
-export {createCourse , getCourses, updateCourseAnalysis, updateCoursePlan};
+const updateLessonContent = async(req , res)=>{
+    try{
+        const {id} = req.params;
+        const {lessons} = req.body;
+        
+        if(!lessons || !Array.isArray(lessons)){
+            return res.status(400).json({msg : "Lessons array is required"});
+        }
+        
+        const course = await Course.findByIdAndUpdate(
+            id,
+            {
+                $push: { lessons: { $each: lessons } },
+                status: "content_generated"
+            },
+            { new: true }
+        );
+        
+        if(!course){
+            return res.status(404).json({msg : "Course not found"});
+        }
+        
+        res.status(200).json({msg : "Lesson content saved successfully", course});
+    }catch(err){
+        res.status(500).json({msg : "Server Error"});
+    }
+}
+
+export {createCourse , getCourses, updateCourseAnalysis, updateCoursePlan, updateLessonContent};

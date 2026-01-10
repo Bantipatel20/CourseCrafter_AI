@@ -18,7 +18,7 @@ const courseSchema =  new mongoose.Schema(
         },
         status:{
             type:String,
-            enum:["processing","Completed"],
+            enum:["processing","planned","content_generated","Completed"],
             default:"processing"
         },
         analysis: {
@@ -28,6 +28,13 @@ const courseSchema =  new mongoose.Schema(
             style: String
         },
         modules:[],
+        lessons:[
+            {
+                moduleTitle: String,
+                lessonTitle: String,
+                script: String
+            }
+        ],
         videos:[]
     },
     {
