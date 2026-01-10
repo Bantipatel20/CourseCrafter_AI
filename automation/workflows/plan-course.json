@@ -10,48 +10,154 @@
       },
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
-      "position": [250, 300]
+      "position": [250, 300],
+      "id": "webhook-plan-course"
     },
     {
       "parameters": {
-        "model": "gpt-4",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "courseId",
+              "name": "courseId",
+              "value": "={{ $json.courseId }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $json.analysis.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "level",
+              "name": "level",
+              "value": "={{ $json.analysis.level }}",
+              "type": "string"
+            },
+            {
+              "id": "language",
+              "name": "language",
+              "value": "={{ $json.analysis.language }}",
+              "type": "string"
+            },
+            {
+              "id": "style",
+              "name": "style",
+              "value": "={{ $json.analysis.style }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "name": "Set - Prepare Input",
+      "type": "n8n-nodes-base.set",
+      "position": [450, 300],
+      "id": "set-prepare-input"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
         "messages": {
           "messageValues": [
             {
               "role": "system",
-              "message": "You are an AI course planner.\n\nUsing the given data, generate a structured course plan.\nReturn ONLY JSON.\n\nJSON format:\n{\n  \"title\": \"\",\n  \"modules\": [\n    {\n      \"title\": \"\",\n      \"lessons\": []\n    }\n  ]\n}\n\nRules:\n- Beginner level → simple structure\n- Use 3–5 modules\n- Each module 3–5 lessons"
+              "message": "You are an expert course designer.\n\nCreate a complete course plan using the details below.\n\nRules:\n- Use 3 to 5 modules\n- Each module must have 3 to 5 lessons\n- Follow a beginner-friendly learning order\n- Return ONLY valid JSON\n- Do NOT include explanations\n\nJSON format:\n{\n  \"title\": \"\",\n  \"modules\": [\n    {\n      \"title\": \"\",\n      \"lessons\": []\n    }\n  ]\n}"
             },
             {
               "role": "user",
-              "message": "Subject: {{ $json.analysis.subject }}\nLevel: {{ $json.analysis.level }}\nLanguage: {{ $json.analysis.language }}\nStyle: {{ $json.analysis.style }}"
+              "message": "Subject: {{ $json.subject }}\nLevel: {{ $json.level }}\nLanguage: {{ $json.language }}\nTeaching Style: {{ $json.style }}"
             }
           ]
+        },
+        "options": {
+          "temperature": 0.7
         }
       },
-      "name": "OpenAI",
+      "name": "OpenAI - Course Planner",
       "type": "n8n-nodes-base.openAi",
-      "position": [450, 300]
+      "position": [650, 300],
+      "id": "openai-planner"
     },
     {
       "parameters": {
-        "url": "http://localhost:5000/api/course/={{ $json.courseId }}/plan",
+        "mode": "raw",
+        "jsonOutput": "={{ $json.message.content }}",
+        "options": {}
+      },
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.set",
+      "position": [850, 300],
+      "id": "parse-json"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "courseId",
+              "name": "courseId",
+              "value": "={{ $('Set - Prepare Input').item.json.courseId }}",
+              "type": "string"
+            },
+            {
+              "id": "title",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "modules",
+              "name": "modules",
+              "value": "={{ $json.modules }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "name": "Set - Final Plan",
+      "type": "n8n-nodes-base.set",
+      "position": [1050, 300],
+      "id": "set-final-plan"
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "body": {
-          "bodyValues": [
+        "url": "=http://localhost:5000/api/course/{{ $json.courseId }}/plan",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
             {
               "name": "title",
               "value": "={{ $json.title }}"
             },
             {
               "name": "modules",
-              "value": "={{ JSON.stringify($json.modules) }}"
+              "value": "={{ $json.modules }}"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "name": "HTTP Request",
+      "name": "HTTP Request - Save Plan",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [650, 300]
+      "position": [1250, 300],
+      "id": "http-save-plan"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1450, 300],
+      "id": "respond-webhook"
     }
   ],
   "connections": {
@@ -59,18 +165,62 @@
       "main": [
         [
           {
-            "node": "OpenAI",
+            "node": "Set - Prepare Input",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI": {
+    "Set - Prepare Input": {
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "OpenAI - Course Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Course Planner": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Set - Final Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - Final Plan": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Save Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Save Plan": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
